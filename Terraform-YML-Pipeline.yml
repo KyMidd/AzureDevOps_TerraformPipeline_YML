@@ -1,0 +1,106 @@
+# Terraform release pipeline
+variables:
+  tf_directory: '$(System.DefaultWorkingDirectory)/terraform/envA'
+  secure_file_name: 'terraform-secure-file.auto.tfvars'
+  terraform_version: '0.12.18'
+  pool: 'AWS-Pool'
+
+# Release instructions
+stages:
+- stage: Terraform_Plan
+  jobs:
+  - deployment: Terraform_Plan
+    displayName: Terraform Plan
+    pool: $(pool)
+    continueOnError: 'false'
+    environment: 'TerraformPlan_Environment'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - task: charleszipp.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
+              displayName: 'Install Terraform'
+              inputs:
+                terraformVersion: $(terraform_version)
+
+            - task: DownloadSecureFile@1
+              displayName: 'Download secure file'
+              inputs:
+                secureFile: $(secure_file_name)
+
+            - task: CopyFiles@2
+              displayName: 'Stage secure files'
+              inputs:
+                SourceFolder: '$(Agent.TempDirectory)'
+                Contents: '*.tfvars'
+                TargetFolder: $(tf_directory)
+
+            - task: Bash@3
+              displayName: 'Terraform Init'
+              inputs:
+                targetType: 'inline'
+                script: 'terraform init -input=false'
+                workingDirectory: $(tf_directory)
+                failOnStderr: true
+
+            - task: Bash@3
+              displayName: 'Terraform Validation'
+              inputs:
+                targetType: 'inline'
+                script: 'terraform validate'
+                workingDirectory: $(tf_directory)
+                failOnStderr: true
+
+            - task: Bash@3
+              displayName: 'Terraform Plan'
+              inputs:
+                targetType: 'inline'
+                script: 'terraform plan -lock=false -input=false'
+                workingDirectory: $(tf_directory)
+                failOnStderr: true
+
+- stage: Terraform_Apply
+  jobs:
+  - deployment: Terraform_Apply
+    displayName: Terraform Apply
+    pool: $(pool)
+    continueOnError: 'false'
+    # Run this stage if previous stage(s) succeeded and build reason ISN'T a pull request
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    environment: 'YamlTerraformApplyEnvironment'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - task: charleszipp.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
+              displayName: 'Install Terraform'
+              inputs:
+                terraformVersion: $(terraform_version)
+
+            - task: DownloadSecureFile@1
+              displayName: 'Download secure file'
+              inputs:
+                secureFile: $(secure_file_name)
+
+            - task: CopyFiles@2
+              displayName: 'Stage secure files'
+              inputs:
+                SourceFolder: '$(Agent.TempDirectory)'
+                Contents: '*.tfvars'
+                TargetFolder: $(tf_directory)
+
+            - task: Bash@3
+              displayName: 'Terraform Init'
+              inputs:
+                targetType: 'inline'
+                script: 'terraform init -input=false'
+                workingDirectory: $(tf_directory)
+                failOnStderr: true
+
+            - task: Bash@3
+              displayName: 'Terraform Apply'
+              inputs:
+                targetType: 'inline'
+                script: 'terraform apply -auto-approve -input=false'
+                workingDirectory: $(tf_directory)
+                failOnStderr: true
