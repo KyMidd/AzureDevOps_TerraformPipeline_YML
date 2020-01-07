@@ -1,9 +1,7 @@
 # Terraform release pipeline
 variables:
   tf_directory: '$(System.DefaultWorkingDirectory)/terraform/envA'
-  secure_file_name: 'terraform-secure-file.auto.tfvars'
   terraform_version: '0.12.18'
-  pool: 'AWS-Pool'
 
 # Release instructions
 stages:
@@ -11,29 +9,17 @@ stages:
   jobs:
   - deployment: Terraform_Plan
     displayName: Terraform Plan
-    pool: $(pool)
     continueOnError: 'false'
     environment: 'TerraformPlan_Environment'
     strategy:
       runOnce:
         deploy:
           steps:
+            - checkout: self
             - task: charleszipp.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
               displayName: 'Install Terraform'
               inputs:
                 terraformVersion: $(terraform_version)
-
-            - task: DownloadSecureFile@1
-              displayName: 'Download secure file'
-              inputs:
-                secureFile: $(secure_file_name)
-
-            - task: CopyFiles@2
-              displayName: 'Stage secure files'
-              inputs:
-                SourceFolder: '$(Agent.TempDirectory)'
-                Contents: '*.tfvars'
-                TargetFolder: $(tf_directory)
 
             - task: Bash@3
               displayName: 'Terraform Init'
@@ -63,7 +49,6 @@ stages:
   jobs:
   - deployment: Terraform_Apply
     displayName: Terraform Apply
-    pool: $(pool)
     continueOnError: 'false'
     # Run this stage if previous stage(s) succeeded and build reason ISN'T a pull request
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
@@ -72,22 +57,11 @@ stages:
       runOnce:
         deploy:
           steps:
+            - checkout: self
             - task: charleszipp.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
               displayName: 'Install Terraform'
               inputs:
                 terraformVersion: $(terraform_version)
-
-            - task: DownloadSecureFile@1
-              displayName: 'Download secure file'
-              inputs:
-                secureFile: $(secure_file_name)
-
-            - task: CopyFiles@2
-              displayName: 'Stage secure files'
-              inputs:
-                SourceFolder: '$(Agent.TempDirectory)'
-                Contents: '*.tfvars'
-                TargetFolder: $(tf_directory)
 
             - task: Bash@3
               displayName: 'Terraform Init'
