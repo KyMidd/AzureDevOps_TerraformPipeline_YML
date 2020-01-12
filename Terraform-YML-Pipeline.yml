@@ -2,6 +2,10 @@
 variables:
   tf_directory: '$(System.DefaultWorkingDirectory)/terraform/envA'
   terraform_version: '0.12.18'
+  tf_init_cli_options: '-input=false'
+  tf_validate_cli_options: ''
+  tf_plan_cli_options: '-lock=false -input=false'
+  tf_apply_cli_options: '-auto-approve -input=false'
 
 # Release instructions
 stages:
@@ -25,7 +29,7 @@ stages:
               displayName: 'Terraform Init'
               inputs:
                 targetType: 'inline'
-                script: 'terraform init -input=false'
+                script: 'terraform init $(tf_init_cli_options)'
                 workingDirectory: $(tf_directory)
                 failOnStderr: true
 
@@ -33,7 +37,7 @@ stages:
               displayName: 'Terraform Validation'
               inputs:
                 targetType: 'inline'
-                script: 'terraform validate'
+                script: 'terraform validate $(tf_validate_cli_options)'
                 workingDirectory: $(tf_directory)
                 failOnStderr: true
 
@@ -41,7 +45,7 @@ stages:
               displayName: 'Terraform Plan'
               inputs:
                 targetType: 'inline'
-                script: 'terraform plan -lock=false -input=false'
+                script: 'terraform plan $(tf_plan_cli_options)'
                 workingDirectory: $(tf_directory)
                 failOnStderr: true
 
@@ -67,7 +71,7 @@ stages:
               displayName: 'Terraform Init'
               inputs:
                 targetType: 'inline'
-                script: 'terraform init -input=false'
+                script: 'terraform init $(tf_init_cli_options)'
                 workingDirectory: $(tf_directory)
                 failOnStderr: true
 
@@ -75,6 +79,6 @@ stages:
               displayName: 'Terraform Apply'
               inputs:
                 targetType: 'inline'
-                script: 'terraform apply -auto-approve -input=false'
+                script: 'terraform apply $(tf_apply_cli_options)'
                 workingDirectory: $(tf_directory)
                 failOnStderr: true
